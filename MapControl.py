@@ -387,6 +387,9 @@ class GUI:
             # These are precalculated to reduce computations in the blend
             self.img_h = img.shape[0]
             self.img_w = img.shape[1]
+
+            cv2.resizeWindow('Player window', self.img_w, self.img_h)
+            cv2.resizeWindow('DM window', self.img_w, self.img_h)
             
             #### Setting up overlays and images for showing ####
             self.overlay_player = np.ones((img.shape[0],img.shape[1],1),np.uint8)*self.alpha_player
