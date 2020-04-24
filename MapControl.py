@@ -255,15 +255,11 @@ class GUI:
     def fogUpdate(self, event, x, y, flags, params):
         if self.flag_picture_loaded:
             if event == cv2.EVENT_LBUTTONDOWN:
-                if self.update_fog is False:
-                    self.update_fog = True
-                    flag_blend, ymin, ymax, xmin, xmax = self.drawRemoveFog(x, y)
-                    if flag_blend:
-                        self.player_image[ymin:ymax,xmin:xmax,:] = self.blendFocused(self.overlay_player, ymin, ymax, xmin, xmax)
-                        self.dm_image[ymin:ymax,xmin:xmax,:] = self.blendFocused(self.overlay_dm, ymin, ymax, xmin, xmax)
-                else:
-                    self.update_fog = False
-                    self.dm_image = self.blendSimple(self.overlay_dm)
+                self.update_fog = True
+                flag_blend, ymin, ymax, xmin, xmax = self.drawRemoveFog(x, y)
+                if flag_blend:
+                    self.player_image[ymin:ymax,xmin:xmax,:] = self.blendFocused(self.overlay_player, ymin, ymax, xmin, xmax)
+                    self.dm_image[ymin:ymax,xmin:xmax,:] = self.blendFocused(self.overlay_dm, ymin, ymax, xmin, xmax)
             elif event == cv2.EVENT_MOUSEMOVE:
                 if self.update_fog is True:
                     flag_blend, ymin, ymax, xmin, xmax = self.drawRemoveFog(x, y)
@@ -273,12 +269,15 @@ class GUI:
                 else:
                     self.mouse_x = x
                     self.mouse_y = y
-            if event == cv2.EVENT_MOUSEWHEEL:
+            elif event == cv2.EVENT_MOUSEWHEEL:
                 #sign of the flag shows direction of mousewheel
                 if flags > 0:
                     self.changeBrushSizeHotKey(CHANGE_VALUE_FOG)
                 else:
                     self.changeBrushSizeHotKey(-CHANGE_VALUE_FOG)
+            elif event == cv2.EVENT_LBUTTONUP:
+                self.update_fog = False
+
     
     # Reducing even further by only blending the relevant areas
     def blendFocused(self, overlay_input, ymin, ymax, xmin, xmax):        
@@ -313,35 +312,30 @@ class GUI:
         # Split out the transparency mask from the colour info
         overlay_img = overlay_t_img[:,:,:3] # Grab the BRG planes
         overlay_mask = overlay_t_img[:,:,3:]  # And the alpha plane
-    
         # Again calculate the inverse mask
         background_mask = 255 - overlay_mask
-    
         # Turn the masks into three channel, so we can use them as weights
         overlay_mask = cv2.cvtColor(overlay_mask, cv2.COLOR_GRAY2BGR)
         background_mask = cv2.cvtColor(background_mask, cv2.COLOR_GRAY2BGR)
-    
         # Create a masked out face image, and masked out overlay
         # We convert the images to floating point in range 0.0 - 1.0
         face_part = (face_img * (1 / 255.0)) * (background_mask * (1 / 255.0))
         overlay_part = (overlay_img * (1 / 255.0)) * (overlay_mask * (1 / 255.0))
-    
         # And finally just add them together, and rescale it back to an 8bit integer image   
         return np.uint8(cv2.addWeighted(face_part, 255.0, overlay_part, 255.0, 0.0))
     
     def draw(self, event, x, y, flags, params):        
         if self.flag_picture_loaded:
             if event == cv2.EVENT_LBUTTONDOWN:
-                if self.flag_draw is False:
-                    if (x,y) not in self.draw_pnts:
-                        self.draw_pnts[(x,y)] = ['point',(self.sldr_blue.get(),self.sldr_green.get(),self.sldr_red.get()),self.sldr_pnt.get()]
-                    self.flag_draw = True
-                else:
-                    self.flag_draw = False
+                if (x,y) not in self.draw_pnts:
+                    self.draw_pnts[(x,y)] = ['point',(self.sldr_blue.get(),self.sldr_green.get(),self.sldr_red.get()),self.sldr_pnt.get()]
+                self.flag_draw = True
             elif event == cv2.EVENT_MOUSEMOVE:
                 if self.flag_draw:
                     if (x,y) not in self.draw_pnts:
                         self.draw_pnts[(x,y)] = ['point',(self.sldr_blue.get(),self.sldr_green.get(),self.sldr_red.get()),self.sldr_pnt.get()]
+            elif event == cv2.EVENT_LBUTTONUP:
+                self.flag_draw = False
             self.changeDrawSizeMouseWheel(event, flags, CHANGE_VALUE_DRAWING)
                     
     def drawCircle(self, event, x, y, flags, params):        
@@ -361,18 +355,17 @@ class GUI:
     def erase(self, event, x, y, flags, params):        
         if self.flag_picture_loaded:
             if event == cv2.EVENT_LBUTTONDOWN:
-                if self.flag_erase is False:
-                    for pnt in list(self.draw_pnts):
-                        if math.sqrt((pnt[0]-x)**2+(pnt[1]-y)**2) < self.sldr_pnt.get():
-                            del self.draw_pnts[pnt]
-                    self.flag_erase = True
-                else:
-                    self.flag_erase = False
+                for pnt in list(self.draw_pnts):
+                    if math.sqrt((pnt[0]-x)**2+(pnt[1]-y)**2) < self.sldr_pnt.get():
+                        del self.draw_pnts[pnt]
+                self.flag_erase = True
             elif event == cv2.EVENT_MOUSEMOVE:
                 if self.flag_erase:
                     for pnt in list(self.draw_pnts):
                         if math.sqrt((pnt[0]-x)**2+(pnt[1]-y)**2) < self.sldr_pnt.get():
                             del self.draw_pnts[pnt]
+            elif event == cv2.EVENT_LBUTTONUP:
+                self.flag_erase = False
         self.changeDrawSizeMouseWheel(event, flags, CHANGE_VALUE_DRAWING)
     
     # Button function in the tkinter window
